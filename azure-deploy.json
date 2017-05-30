@@ -4,7 +4,7 @@
   "parameters": {
     "appName": {
       "type": "string",
-      "maxLength": 11,
+      "maxLength": 7,
       "metadata": {
         "description": "The value to use for starting the storage account name."
       }
@@ -83,7 +83,7 @@
             "kind": "functionapp",
             "name": "[variables('hostingPlanName')]",
             "apiVersion": "2015-08-01",
-            "location": "UK South",
+            "location": "[resourceGroup().location]",
             "scale": null,
             "properties": {
                 "name": "[variables('hostingPlanName')]",
