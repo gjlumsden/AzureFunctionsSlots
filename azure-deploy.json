@@ -160,7 +160,8 @@
             "type": "config",
             "dependsOn": [
                 "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
-                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+                "[resourceId('Microsoft.Web/sites/slots', variables('functionAppName'), parameters('slotName'))]"
             ],
             "properties": {
                 "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
