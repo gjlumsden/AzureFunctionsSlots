@@ -1,0 +1,182 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "maxLength": 11,
+      "metadata": {
+        "description": "The value to use for starting the storage account name."
+      }
+    },
+    "slotName":{
+        "type": "string",
+        "metadata": {
+            "description":"The name of the deplotment slot"
+        }
+    },
+    "storageSKU": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_ZRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Premium_LRS"
+      ],
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "The type of replication to use for the storage account."
+      }
+    },
+    "FUNCTIONS_EXTENSION_VERSION": {
+      "type": "string",
+      "metadata": { "description": "The version of the Function App runtime to use" },
+      "defaultValue": "latest",
+      "allowedValues": [
+        "latest",
+        "~1",
+        "beta"
+      ]
+    }
+  },
+  "variables": {
+    "functionAppStorageName": "[tolower(concat(parameters('appName'),'func', uniqueString(resourceGroup().id)))]",
+    "functionAppName": "[concat(parameters('appName'),'-Functions-', uniqueString(resourceGroup().id))]",
+    "hostingPlanName": "[concat(parameters('appName'),'-Plan-', uniqueString(resourceGroup().id))]",
+    "appInsightsName": "[concat(parameters('appName'),'-Functions-AI-', uniqueString(resourceGroup().id))]",
+    "asaJobName": "[concat(parameters('appName'), '-asa-job-', uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "name": "[variables('functionAppStorageName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[parameters('storageSku')]"
+      },
+      "kind": "Storage",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "for": "Functions Storage"
+      },
+      "properties": {
+        "encryption": {
+          "services": {
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+            "sku": {
+                "name": "Y1",
+                "tier": "Dynamic",
+                "size": "Y1",
+                "family": "Y",
+                "capacity": 0
+            },
+            "kind": "functionapp",
+            "name": "[variables('hostingPlanName')]",
+            "apiVersion": "2015-08-01",
+            "location": "UK South",
+            "scale": null,
+            "properties": {
+                "name": "[variables('hostingPlanName')]",
+                "numberOfWorkers": 0
+            },
+            "dependsOn": []
+    },
+    {
+      "apiVersion": "2014-06-01",
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('functionAppName')]",
+      "location": "[resourceGroup().location]",
+      "kind": "functionapp",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName'))]"
+      ],
+      "properties": {
+        "name": "[variables('functionAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "name": "appsettings",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+            "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
+            "FUNCTIONS_EXTENSION_VERSION": "[parameters('FUNCTIONS_EXTENSION_VERSION')]",
+            "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
+            "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), '8be4')]",
+            "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]"
+          }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[parameters('slotName')]",
+            "type": "slots",
+            "tags": {
+                "displayName": "[concat(parameters('slotName'), ' Deployment Slot')]"
+            },
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
+            ],
+            "properties": {
+            },
+            "resources": []
+        },
+        {
+          "apiVersion": "2014-06-01",
+          "type": "config",
+          "name": "web",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+          ],
+          "properties": {
+            "use32BitWorkerProcess": false
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2014-04-01",
+      "name": "[variables('appInsightsName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/sites', variables('functionAppName')))]": "Resource",
+        "displayName": "AppInsightsComponent"
+      },
+      "properties": {
+        "ApplicationId": "[variables('functionAppName')]"
+      }
+    }
+  ],
+  "outputs": {
+    "functionAppName": {
+      "value": "[variables('functionAppName')]",
+      "type": "string"
+    },
+    "AppInsightsKey": {
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
+      "type": "string"
+    }
+  }
+}
