@@ -103,7 +103,7 @@
       ],
       "properties": {
         "name": "[variables('functionAppName')]",
-                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+        "serverFarm": "[variables('hostingPlanName')]"
       },
       "resources": [
         {
