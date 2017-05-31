@@ -6,11 +6,12 @@
             "type": "string",
             "maxLength": 7,
             "metadata": {
-                "description": "The value to use for starting the storage account name."
+                "description": "The value to use for the app name. Used as part of the name for all resources which is suffixed by a unique string."
             }
         },
         "slotName": {
             "type": "string",
+            "defaultValue": "development",
             "metadata": {
                 "description": "The name of the deplotment slot"
             }
@@ -46,8 +47,7 @@
         "functionAppStorageName": "[tolower(concat(parameters('appName'),'func', uniqueString(resourceGroup().id)))]",
         "functionAppName": "[concat(parameters('appName'),'-Functions-', uniqueString(resourceGroup().id))]",
         "hostingPlanName": "[concat(parameters('appName'),'-Plan-', uniqueString(resourceGroup().id))]",
-        "appInsightsName": "[concat(parameters('appName'),'-Functions-AI-', uniqueString(resourceGroup().id))]",
-        "asaJobName": "[concat(parameters('appName'), '-asa-job-', uniqueString(resourceGroup().id))]"
+        "appInsightsName": "[concat(parameters('appName'),'-Functions-AI-', uniqueString(resourceGroup().id))]"
     },
     "resources": [
         {
@@ -63,33 +63,18 @@
                 "for": "Functions Storage"
             },
             "properties": {
-                "encryption": {
-                    "services": {
-                        "blob": {
-                            "enabled": true
-                        }
-                    },
-                    "keySource": "Microsoft.Storage"
-                }
             }
         },
         {
             "type": "Microsoft.Web/serverfarms",
-            "sku": {
-                "name": "Y1",
-                "tier": "Dynamic",
-                "size": "Y1",
-                "family": "Y",
-                "capacity": 0
-            },
             "kind": "functionapp",
             "name": "[variables('hostingPlanName')]",
             "apiVersion": "2015-08-01",
             "location": "[resourceGroup().location]",
-            "scale": null,
             "properties": {
                 "name": "[variables('hostingPlanName')]",
-                "numberOfWorkers": 0
+                "computeMode": "Dynamic",
+                "sku": "Dynamic"
             },
             "dependsOn": []
         },
@@ -120,7 +105,7 @@
                     },
                     "properties": {
                         "appSettingNames": [
-                            "Sticky"
+                            "StickySetting"
                         ]
                     }
                 },
@@ -140,7 +125,7 @@
                         "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), '8be4')]",
                         "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
                         "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
-                        "Sticky": "Production"
+                        "StickySetting": "StuckToProduction"
                     }
                 },
                 {
@@ -170,10 +155,10 @@
                                 "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
                                 "FUNCTIONS_EXTENSION_VERSION": "[parameters('FUNCTIONS_EXTENSION_VERSION')]",
                                 "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionAppStorageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionAppStorageName')), '2015-05-01-preview').key1)]",
-                                "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), '8be5')]",
+                                "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), 'development')]",
                                 "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
                                 "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
-                                "Sticky": "[parameters('slotName')]"
+                                "StickySetting": "[concat('StuckTo',parameters('slotName'))]"
                             }
                         }
                     ]
@@ -211,10 +196,6 @@
     "outputs": {
         "functionAppName": {
             "value": "[variables('functionAppName')]",
-            "type": "string"
-        },
-        "AppInsightsKey": {
-            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
             "type": "string"
         }
     }
