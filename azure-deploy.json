@@ -130,7 +130,8 @@
                         "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), '8be4')]",
                         "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
                         "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
-                        "StickySetting": "StuckToProduction"
+                        "StickySetting": "StuckToProduction",
+                        "AzureWebJobsSecretStorageType": "Blob"
                     }
                 },
                 {
@@ -163,7 +164,8 @@
                                 "WEBSITE_CONTENTSHARE": "[concat(toLower(parameters('appName')), 'development')]",
                                 "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
                                 "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2014-04-01').InstrumentationKey]",
-                                "StickySetting": "[concat('StuckTo',parameters('slotName'))]"
+                                "StickySetting": "[concat('StuckTo',parameters('slotName'))]",
+                                "AzureWebJobsSecretStorageType": "Blob"
                             }
                         }
                     ]
